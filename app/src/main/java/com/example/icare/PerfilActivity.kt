@@ -7,19 +7,24 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 
-class LoginActivity : AppCompatActivity() {
+class PerfilActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        setContentView(R.layout.activity_login)
+        setContentView(R.layout.activity_perfil)
+
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
             insets
         }
 
-        findViewById<android.view.View>(R.id.buttonCriarCadastro).setOnClickListener {
-            startActivity(Intent(this, CadastroActivity::class.java))
+        findViewById<android.view.View>(R.id.botaoEditarPerfil).setOnClickListener {
+            startActivity(Intent(this, EditarPerfilActivity::class.java))
+        }
+
+        findViewById<android.view.View>(R.id.botaoSairPerfil).setOnClickListener {
+            finish()
         }
     }
 }
