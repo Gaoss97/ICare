@@ -5,6 +5,7 @@ import android.app.AlertDialog
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.preference.PreferenceManager
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Spinner
@@ -16,8 +17,19 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import com.google.android.material.floatingactionbutton.FloatingActionButton
+import org.osmdroid.config.Configuration
+import org.osmdroid.tileprovider.tilesource.TileSourceFactory
+import org.osmdroid.util.GeoPoint
+import org.osmdroid.views.MapView
+import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider
+import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
 
 class MainActivity : AppCompatActivity() {
+
+    private lateinit var map: MapView
+    private lateinit var locationOverlay: MyLocationNewOverlay
+
     private val capturarFotoSos = registerForActivityResult(
         ActivityResultContracts.TakePicturePreview()
     ) { foto ->
@@ -38,16 +50,66 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private val solicitarPermissoesLocalizacao = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissoes ->
+        val concedida = permissoes[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
+                permissoes[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+        if (concedida) {
+            ativarLocalizacaoNoMapa()
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        // Configuração do Osmdroid (importante antes do setContentView)
+        Configuration.getInstance().load(this, PreferenceManager.getDefaultSharedPreferences(this))
+        Configuration.getInstance().userAgentValue = packageName
+
         enableEdgeToEdge()
         setContentView(R.layout.activity_main)
+        
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
             insets
         }
 
+        // Inicializar MapView (Osmdroid)
+        map = findViewById(R.id.mapView)
+        map.setTileSource(TileSourceFactory.MAPNIK)
+        map.setMultiTouchControls(true)
+        
+        val mapController = map.controller
+        mapController.setZoom(15.0)
+        val startPoint = GeoPoint(-23.5505, -46.6333) // São Paulo
+        mapController.setCenter(startPoint)
+
+        configurarLocalizacao()
+        configurarInterface()
+    }
+
+    private fun configurarLocalizacao() {
+        locationOverlay = MyLocationNewOverlay(GpsMyLocationProvider(this), map)
+        locationOverlay.enableMyLocation()
+        map.overlays.add(locationOverlay)
+
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            ativarLocalizacaoNoMapa()
+        } else {
+            solicitarPermissoesLocalizacao.launch(arrayOf(
+                Manifest.permission.ACCESS_FINE_LOCATION,
+                Manifest.permission.ACCESS_COARSE_LOCATION
+            ))
+        }
+    }
+
+    private fun ativarLocalizacaoNoMapa() {
+        locationOverlay.enableFollowLocation()
+    }
+
+    private fun configurarInterface() {
         val usuarios = listOf("Ana Clara", "Joao Pedro", "Marina Lima")
         val spinnerUsuario = findViewById<Spinner>(R.id.spinnerUsuarioRastreado)
         spinnerUsuario.adapter = ArrayAdapter(
@@ -56,15 +118,9 @@ class MainActivity : AppCompatActivity() {
             usuarios
         )
         spinnerUsuario.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(
-                parent: AdapterView<*>?,
-                view: android.view.View?,
-                position: Int,
-                id: Long
-            ) {
+            override fun onItemSelected(parent: AdapterView<*>?, view: android.view.View?, position: Int, id: Long) {
                 atualizarDetalhesUsuario(position)
             }
-
             override fun onNothingSelected(parent: AdapterView<*>?) = Unit
         }
 
@@ -78,6 +134,16 @@ class MainActivity : AppCompatActivity() {
 
         findViewById<android.view.View>(R.id.botaoHistorico).setOnClickListener {
             startActivity(Intent(this, HistoricoActivity::class.java))
+        }
+
+        findViewById<FloatingActionButton>(R.id.botaoCentralizar).setOnClickListener {
+            val myLocation = locationOverlay.myLocation
+            if (myLocation != null) {
+                map.controller.animateTo(myLocation)
+                map.controller.setZoom(17.0)
+            } else {
+                Toast.makeText(this, "Localização ainda não disponível", Toast.LENGTH_SHORT).show()
+            }
         }
 
         findViewById<android.view.View>(R.id.botaoPanico).setOnClickListener {
@@ -132,5 +198,15 @@ class MainActivity : AppCompatActivity() {
                 atualizacao.text = "14:32"
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        map.onResume()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        map.onPause()
     }
 }
