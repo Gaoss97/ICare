@@ -1,6 +1,7 @@
 package com.example.icare
 
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
@@ -11,8 +12,18 @@ import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Query
 
 class HistoricoActivity : AppCompatActivity() {
+
+    private lateinit var adapter: HistoricoAdapter
+    private val db = FirebaseFirestore.getInstance()
+    private val auth = FirebaseAuth.getInstance()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -24,29 +35,50 @@ class HistoricoActivity : AppCompatActivity() {
             insets
         }
 
+        setupRecyclerView()
         configurarFiltros()
 
         findViewById<View>(R.id.botaoVoltarHistorico).setOnClickListener {
             finish()
         }
 
-        val mensagemMapa = "Visualizacao da rota no mapa sera adicionada depois."
-        findViewById<View>(R.id.botaoVerMapaHoje).setOnClickListener {
-            Toast.makeText(this, mensagemMapa, Toast.LENGTH_SHORT).show()
+        carregarHistorico()
+    }
+
+    private fun setupRecyclerView() {
+        val recycler = findViewById<RecyclerView>(R.id.recyclerHistorico)
+        recycler.layoutManager = LinearLayoutManager(this)
+        adapter = HistoricoAdapter(emptyList()) { ponto ->
+            Toast.makeText(this, "Ver no mapa: ${ponto.latitude}, ${ponto.longitude}", Toast.LENGTH_SHORT).show()
         }
-        findViewById<View>(R.id.botaoVerMapaOntem).setOnClickListener {
-            Toast.makeText(this, mensagemMapa, Toast.LENGTH_SHORT).show()
-        }
-        findViewById<View>(R.id.botaoVerMapaAnterior).setOnClickListener {
-            Toast.makeText(this, mensagemMapa, Toast.LENGTH_SHORT).show()
-        }
+        recycler.adapter = adapter
+    }
+
+    private fun carregarHistorico() {
+        val userId = auth.currentUser?.uid ?: return
+
+        db.collection("usuarios").document(userId)
+            .collection("historico_posicoes")
+            .orderBy("timestamp", Query.Direction.DESCENDING)
+            .limit(50)
+            .addSnapshotListener { snapshot, e ->
+                if (e != null) {
+                    Log.w("HistoricoActivity", "Erro ao carregar histórico", e)
+                    return@addSnapshotListener
+                }
+
+                if (snapshot != null) {
+                    val pontos = snapshot.toObjects(HistoricoPonto::class.java)
+                    adapter.atualizarPontos(pontos)
+                }
+            }
     }
 
     private fun configurarFiltros() {
         findViewById<Spinner>(R.id.spinnerUsuarioHistorico).adapter = ArrayAdapter(
             this,
             android.R.layout.simple_spinner_dropdown_item,
-            listOf("Ana Clara", "Joao Pedro", "Marina Lima")
+            listOf("Meu Histórico")
         )
 
         val tipoHistorico = findViewById<Spinner>(R.id.spinnerTipoHistorico)
@@ -62,7 +94,7 @@ class HistoricoActivity : AppCompatActivity() {
                 position: Int,
                 id: Long
             ) {
-                alternarTipoHistorico(position == 1)
+                // Futura implementação de alternância
             }
 
             override fun onNothingSelected(parent: AdapterView<*>?) = Unit
@@ -71,17 +103,7 @@ class HistoricoActivity : AppCompatActivity() {
         findViewById<Spinner>(R.id.spinnerFiltroHistorico).adapter = ArrayAdapter(
             this,
             android.R.layout.simple_spinner_dropdown_item,
-            listOf("Ultimos registros", "Hoje", "Ultimos 7 dias", "Ultimos 30 dias")
+            listOf("Últimos registros")
         )
-    }
-
-    private fun alternarTipoHistorico(mostrarAlertas: Boolean) {
-        findViewById<View>(R.id.containerRotas).visibility = if (mostrarAlertas) View.GONE else View.VISIBLE
-        findViewById<View>(R.id.containerAlertas).visibility = if (mostrarAlertas) View.VISIBLE else View.GONE
-        findViewById<TextView>(R.id.subtituloHistorico).text = if (mostrarAlertas) {
-            "Alertas recebidos para o usuario selecionado."
-        } else {
-            "Rotas percorridas pelo usuario selecionado."
-        }
     }
 }

@@ -59,9 +59,10 @@
             android:padding="20dp">
 
             <TextView
+                android:id="@+id/textoSelecioneUsuario"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Usuário rastreado"
+                android:text="Selecione o usuário"
                 android:textColor="#888888"
                 android:textSize="16sp" />
 
@@ -172,6 +173,24 @@
                     android:textColor="#111827"
                     android:textSize="16sp" />
             </LinearLayout>
+
+            <ImageView
+                android:id="@+id/imageSos"
+                android:layout_width="match_parent"
+                android:layout_height="200dp"
+                android:layout_marginTop="16dp"
+                android:scaleType="centerCrop"
+                android:visibility="gone"
+                tools:src="@tools:sample/avatars" />
+
+            <Button
+                android:id="@+id/botaoResolverSos"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:layout_marginTop="12dp"
+                android:backgroundTint="#15803D"
+                android:text="Marcar como Seguro"
+                android:visibility="gone" />
 
             <Button
                 android:id="@+id/botaoHistorico"

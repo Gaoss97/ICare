@@ -165,6 +165,20 @@
                     android:textColorHint="#6B7280" />
 
                 <EditText
+                    android:id="@+id/editEmailResponsavelPerfil"
+                    android:layout_width="match_parent"
+                    android:layout_height="56dp"
+                    android:layout_marginTop="12dp"
+                    android:background="#F9FAFB"
+                    android:hint="E-mail do responsável"
+                    android:inputType="textEmailAddress"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp"
+                    android:textColor="#111827"
+                    android:textColorHint="#6B7280"
+                    android:visibility="gone" />
+
+                <EditText
                     android:id="@+id/editCodigoGrupoPerfil"
                     android:layout_width="match_parent"
                     android:layout_height="56dp"

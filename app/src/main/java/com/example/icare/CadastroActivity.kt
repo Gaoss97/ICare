@@ -33,14 +33,19 @@ class CadastroActivity : AppCompatActivity() {
         val editEmailResponsavel = findViewById<EditText>(R.id.editEmailResponsavel)
         val textoEntrar = findViewById<TextView>(R.id.textoEntrar)
 
+        val editTelefone = findViewById<EditText>(R.id.editTelefone)
+        editTelefone.addTextChangedListener(TelefoneMaskWatcher(editTelefone))
+
         radioTipoUsuario.setOnCheckedChangeListener { _, checkedId ->
             val usuarioRastreado = checkedId == R.id.radioRastreado
-            editGrupo.hint = if (usuarioRastreado) {
-                "Código do grupo"
+            if (usuarioRastreado) {
+                editGrupo.visibility = View.GONE
+                editEmailResponsavel.visibility = View.VISIBLE
             } else {
-                "Nome do grupo inicial (opcional)"
+                editGrupo.visibility = View.VISIBLE
+                editGrupo.hint = "Nome do seu grupo (ex: Família Silva)"
+                editEmailResponsavel.visibility = View.GONE
             }
-            editEmailResponsavel.visibility = if (usuarioRastreado) View.VISIBLE else View.GONE
         }
 
         findViewById<View>(R.id.botaoFoto).setOnClickListener {
@@ -62,7 +67,7 @@ class CadastroActivity : AppCompatActivity() {
         val senha = findViewById<EditText>(R.id.editSenha).text.toString()
         val confirmarSenha = findViewById<EditText>(R.id.editConfirmarSenha).text.toString()
         val telefone = findViewById<EditText>(R.id.editTelefone).text.toString().trim()
-        val grupo = findViewById<EditText>(R.id.editGrupo).text.toString().trim()
+        val grupoDigitado = findViewById<EditText>(R.id.editGrupo).text.toString().trim()
         val emailResponsavel = findViewById<EditText>(R.id.editEmailResponsavel).text.toString().trim()
         val tipo = if (findViewById<RadioGroup>(R.id.radioTipoUsuario).checkedRadioButtonId == R.id.radioRastreado) {
             "rastreado"
@@ -82,6 +87,38 @@ class CadastroActivity : AppCompatActivity() {
 
         findViewById<View>(R.id.botaoSalvarCadastro).isEnabled = false
 
+        // Se for rastreado e informou email do responsável, vamos tentar buscar o grupo desse responsável primeiro
+        if (tipo == "rastreado" && emailResponsavel.isNotBlank()) {
+            db.collection("usuarios")
+                .whereEqualTo("email", emailResponsavel)
+                .whereEqualTo("tipo", "responsavel")
+                .get()
+                .addOnSuccessListener { documents ->
+                    var grupoFinal = grupoDigitado
+                    if (!documents.isEmpty) {
+                        // Encontrou o responsável, pega o grupo dele
+                        val docResponsavel = documents.documents[0]
+                        grupoFinal = docResponsavel.getString("grupo") ?: grupoDigitado
+                    }
+                    prosseguirComCriacaoAuth(nome, email, senha, telefone, tipo, grupoFinal, emailResponsavel)
+                }
+                .addOnFailureListener {
+                    prosseguirComCriacaoAuth(nome, email, senha, telefone, tipo, grupoDigitado, emailResponsavel)
+                }
+        } else {
+            prosseguirComCriacaoAuth(nome, email, senha, telefone, tipo, grupoDigitado, emailResponsavel)
+        }
+    }
+
+    private fun prosseguirComCriacaoAuth(
+        nome: String,
+        email: String,
+        senha: String,
+        telefone: String,
+        tipo: String,
+        grupo: String,
+        emailResponsavel: String
+    ) {
         auth.createUserWithEmailAndPassword(email, senha)
             .addOnSuccessListener { resultado ->
                 val uid = resultado.user?.uid
@@ -90,7 +127,6 @@ class CadastroActivity : AppCompatActivity() {
                     Toast.makeText(this, "Não foi possível criar o usuário.", Toast.LENGTH_SHORT).show()
                     return@addOnSuccessListener
                 }
-
                 salvarUsuario(uid, nome, email, telefone, tipo, grupo, emailResponsavel)
             }
             .addOnFailureListener { erro ->
@@ -126,12 +162,41 @@ class CadastroActivity : AppCompatActivity() {
             .document(uid)
             .set(usuario)
             .addOnSuccessListener {
-                Toast.makeText(this, "Cadastro criado.", Toast.LENGTH_SHORT).show()
-                finish()
+                if (tipo == "responsavel") {
+                    atualizarRastreadosPendentes(email, grupo)
+                } else {
+                    Toast.makeText(this, "Cadastro criado.", Toast.LENGTH_SHORT).show()
+                    finish()
+                }
             }
             .addOnFailureListener { erro ->
                 findViewById<View>(R.id.botaoSalvarCadastro).isEnabled = true
                 Toast.makeText(this, "Erro ao salvar dados: ${erro.message}", Toast.LENGTH_LONG).show()
+            }
+    }
+
+    private fun atualizarRastreadosPendentes(emailResp: String, grupo: String) {
+        db.collection("usuarios")
+            .whereEqualTo("emailResponsavel", emailResp)
+            .get()
+            .addOnSuccessListener { documents ->
+                if (documents.isEmpty) {
+                    Toast.makeText(this, "Cadastro criado.", Toast.LENGTH_SHORT).show()
+                    finish()
+                    return@addOnSuccessListener
+                }
+
+                val batch = db.batch()
+                for (doc in documents) {
+                    batch.update(doc.reference, "grupo", grupo)
+                }
+                batch.commit().addOnCompleteListener {
+                    Toast.makeText(this, "Cadastro concluído e dependentes vinculados!", Toast.LENGTH_SHORT).show()
+                    finish()
+                }
+            }
+            .addOnFailureListener {
+                finish()
             }
     }
 }
