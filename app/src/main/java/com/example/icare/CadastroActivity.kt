@@ -10,8 +10,13 @@ import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 
 class CadastroActivity : AppCompatActivity() {
+    private val auth = FirebaseAuth.getInstance()
+    private val db = FirebaseFirestore.getInstance()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -35,11 +40,7 @@ class CadastroActivity : AppCompatActivity() {
             } else {
                 "Nome do grupo inicial (opcional)"
             }
-            editEmailResponsavel.visibility = if (usuarioRastreado) {
-                View.VISIBLE
-            } else {
-                View.GONE
-            }
+            editEmailResponsavel.visibility = if (usuarioRastreado) View.VISIBLE else View.GONE
         }
 
         findViewById<View>(R.id.botaoFoto).setOnClickListener {
@@ -47,12 +48,90 @@ class CadastroActivity : AppCompatActivity() {
         }
 
         findViewById<View>(R.id.botaoSalvarCadastro).setOnClickListener {
-            Toast.makeText(this, "Cadastro criado.", Toast.LENGTH_SHORT).show()
-            finish()
+            criarCadastro()
         }
 
         textoEntrar.setOnClickListener {
             finish()
         }
+    }
+
+    private fun criarCadastro() {
+        val nome = findViewById<EditText>(R.id.editNome).text.toString().trim()
+        val email = findViewById<EditText>(R.id.editEmail).text.toString().trim()
+        val senha = findViewById<EditText>(R.id.editSenha).text.toString()
+        val confirmarSenha = findViewById<EditText>(R.id.editConfirmarSenha).text.toString()
+        val telefone = findViewById<EditText>(R.id.editTelefone).text.toString().trim()
+        val grupo = findViewById<EditText>(R.id.editGrupo).text.toString().trim()
+        val emailResponsavel = findViewById<EditText>(R.id.editEmailResponsavel).text.toString().trim()
+        val tipo = if (findViewById<RadioGroup>(R.id.radioTipoUsuario).checkedRadioButtonId == R.id.radioRastreado) {
+            "rastreado"
+        } else {
+            "responsavel"
+        }
+
+        if (nome.isBlank() || email.isBlank() || senha.isBlank()) {
+            Toast.makeText(this, "Preencha nome, e-mail e senha.", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        if (senha != confirmarSenha) {
+            Toast.makeText(this, "As senhas não conferem.", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        findViewById<View>(R.id.botaoSalvarCadastro).isEnabled = false
+
+        auth.createUserWithEmailAndPassword(email, senha)
+            .addOnSuccessListener { resultado ->
+                val uid = resultado.user?.uid
+                if (uid == null) {
+                    findViewById<View>(R.id.botaoSalvarCadastro).isEnabled = true
+                    Toast.makeText(this, "Não foi possível criar o usuário.", Toast.LENGTH_SHORT).show()
+                    return@addOnSuccessListener
+                }
+
+                salvarUsuario(uid, nome, email, telefone, tipo, grupo, emailResponsavel)
+            }
+            .addOnFailureListener { erro ->
+                findViewById<View>(R.id.botaoSalvarCadastro).isEnabled = true
+                Toast.makeText(this, "Erro no cadastro: ${erro.message}", Toast.LENGTH_LONG).show()
+            }
+    }
+
+    private fun salvarUsuario(
+        uid: String,
+        nome: String,
+        email: String,
+        telefone: String,
+        tipo: String,
+        grupo: String,
+        emailResponsavel: String
+    ) {
+        val usuario = hashMapOf(
+            "uid" to uid,
+            "nome" to nome,
+            "email" to email,
+            "telefone" to telefone,
+            "tipo" to tipo,
+            "grupo" to grupo,
+            "emailResponsavel" to emailResponsavel,
+            "statusRastreamento" to true,
+            "gpsAtivo" to false,
+            "velocidade" to 0,
+            "criadoEm" to System.currentTimeMillis()
+        )
+
+        db.collection("usuarios")
+            .document(uid)
+            .set(usuario)
+            .addOnSuccessListener {
+                Toast.makeText(this, "Cadastro criado.", Toast.LENGTH_SHORT).show()
+                finish()
+            }
+            .addOnFailureListener { erro ->
+                findViewById<View>(R.id.botaoSalvarCadastro).isEnabled = true
+                Toast.makeText(this, "Erro ao salvar dados: ${erro.message}", Toast.LENGTH_LONG).show()
+            }
     }
 }

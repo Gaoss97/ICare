@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/main"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#F5F7FA"
+    android:paddingStart="24dp"
+    android:paddingTop="32dp"
+    android:paddingEnd="24dp"
+    android:paddingBottom="32dp"
+    tools:context=".SelecaoMapaActivity">
+
+    <TextView
+        android:id="@+id/tituloSelecaoMapa"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="Selecionar ponto"
+        android:textColor="#111827"
+        android:textSize="30sp"
+        android:textStyle="bold"
+        app:layout_constraintEnd_toStartOf="@id/botaoVoltarSelecaoMapa"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <Button
+        android:id="@+id/botaoVoltarSelecaoMapa"
+        android:layout_width="wrap_content"
+        android:layout_height="48dp"
+        android:text="Voltar"
+        app:layout_constraintBottom_toBottomOf="@id/tituloSelecaoMapa"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="@id/tituloSelecaoMapa" />
+
+    <TextView
+        android:id="@+id/textoInstrucaoMapa"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="Toque em confirmar para usar um ponto de teste."
+        android:textColor="#4B5563"
+        android:textSize="15sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tituloSelecaoMapa" />
+
+    <TextView
+        android:id="@+id/placeholderMapa"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginTop="24dp"
+        android:layout_marginBottom="24dp"
+        android:background="#E5E7EB"
+        android:gravity="center"
+        android:text="Mapa"
+        android:textColor="#4B5563"
+        android:textSize="22sp"
+        android:textStyle="bold"
+        app:layout_constraintBottom_toTopOf="@id/botaoConfirmarPonto"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/textoInstrucaoMapa" />
+
+    <Button
+        android:id="@+id/botaoConfirmarPonto"
+        android:layout_width="0dp"
+        android:layout_height="56dp"
+        android:text="Confirmar ponto"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>
